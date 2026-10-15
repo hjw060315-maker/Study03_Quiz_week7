@@ -1,6 +1,5 @@
 // ===== 설정 =====
 const CATEGORIES = ["한국사", "세계지리", "과학", "예술과 문화"];
-const QUESTIONS_PER_ROUND = 10;
 
 const MODES = {
   practice: { label: "연습", timeLimit: 0, hint: false, ranked: false, retry: true,
@@ -52,10 +51,12 @@ function validateQuestions(questions) {
     if (!q.source) add("출처 없음");
     if (!/^https?:\/\//.test(q.sourceUrl || "")) add("출처 주소가 http로 시작하지 않음");
   }
-  for (const c of CATEGORIES) {
-    const n = questions.filter(q => q.category === c).length;
-    if (n !== QUESTIONS_PER_ROUND) errors.push({ id: "-", category: c, reason: `문항 수 ${n}개(10개여야 함)` });
-  }
+  const counts = CATEGORIES.map(c => questions.filter(q => q.category === c).length);
+  const target = Math.max(...counts);
+  CATEGORIES.forEach((c, i) => {
+    if (target === 0) errors.push({ id: "-", category: c, reason: "문항 수 0개(1개 이상이어야 함)" });
+    else if (counts[i] !== target) errors.push({ id: "-", category: c, reason: `문항 수 ${counts[i]}개(${target}개여야 함)` });
+  });
   return errors;
 }
 
@@ -229,9 +230,17 @@ test("validateQuestions: 해설·출처 누락", () => {
   all[0].sourceUrl = "example.com";
   assertEqual(validateQuestions(all).map(e => e.reason), ["해설 없음", "출처 없음", "출처 주소가 http로 시작하지 않음"]);
 });
-test("validateQuestions: 카테고리 문항 수", () => {
+test("validateQuestions: 카테고리 문항 수가 다르면 오류", () => {
   const all = sampleQuestions().slice(1);
   assertEqual(validateQuestions(all), [{ id: "-", category: "한국사", reason: "문항 수 9개(10개여야 함)" }]);
+});
+test("validateQuestions: 카테고리 문항 수가 같으면 10개가 아니어도 통과", () => {
+  const all = sampleQuestions().filter(q => !q.id.endsWith("-9"));
+  assertEqual(all.length, 36);
+  assertEqual(validateQuestions(all), []);
+});
+test("validateQuestions: 문항이 하나도 없으면 오류", () => {
+  assertEqual(validateQuestions([]).map(e => e.reason), CATEGORIES.map(() => "문항 수 0개(1개 이상이어야 함)"));
 });
 test("문항 데이터: 오류 0건", () => assertEqual(validateQuestions(QUESTIONS), []));
 test("scoreFor: 정답 1점, 힌트 정답 0.5점, 오답 0점", () => {
@@ -340,6 +349,7 @@ const state = {
   mode: "practice",
   category: null,
   questions: [],
+  roundSize: 0,
   index: 0,
   score: 0,
   firstScore: 0,
@@ -416,6 +426,7 @@ function startGame(mode, category) {
   state.mode = mode;
   state.category = category;
   state.questions = buildRound(QUESTIONS, category);
+  state.roundSize = state.questions.length;
   state.index = 0;
   state.score = 0;
   state.wrong = [];
@@ -532,7 +543,7 @@ function renderResult() {
   const mode = MODES[state.mode];
   if (!state.isRetry) state.firstScore = state.score;
   $("result-label").textContent = `${state.category} · ${mode.label}`;
-  $("result-score").textContent = `${formatScore(state.firstScore)} / ${QUESTIONS_PER_ROUND}`;
+  $("result-score").textContent = `${formatScore(state.firstScore)} / ${state.roundSize}`;
   $("result-notice").hidden = mode.ranked;
   $("retry-summary").hidden = !state.isRetry;
   $("retry-summary").textContent = `다시 푼 결과 ${formatScore(state.score)} / ${state.questions.length}`;
