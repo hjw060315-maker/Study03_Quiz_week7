@@ -349,6 +349,7 @@ const state = {
   timerId: null,
   timeLeft: 0
 };
+const boardView = { mode: "speed", category: CATEGORIES[0] };
 let brokenCategories = new Set();
 
 function $(id) {
@@ -358,6 +359,19 @@ function $(id) {
 function showScreen(name) {
   for (const section of document.querySelectorAll(".screen")) {
     section.hidden = section.id !== "screen-" + name;
+  }
+}
+
+function renderOptionButtons(containerId, options, selected, onPick) {
+  const box = $(containerId);
+  box.innerHTML = "";
+  for (const [value, label] of options) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = label;
+    btn.classList.toggle("selected", value === selected);
+    btn.addEventListener("click", () => onPick(value));
+    box.appendChild(btn);
   }
 }
 
@@ -523,7 +537,53 @@ function renderResult() {
   $("retry-summary").hidden = !state.isRetry;
   $("retry-summary").textContent = `다시 푼 결과 ${formatScore(state.score)} / ${state.questions.length}`;
   $("retry-button").hidden = !(mode.retry && state.wrong.length > 0);
+  $("save-form").hidden = !mode.ranked;
+  $("save-button").disabled = false;
+  $("save-message").hidden = true;
   showScreen("result");
+}
+
+function onSaveRecord(event) {
+  event.preventDefault();
+  const rank = saveRecord(state.mode, state.category, $("name-input").value, state.firstScore);
+  const message = $("save-message");
+  if (rank === null) message.textContent = "기록을 저장할 수 없습니다";
+  else if (rank === 0) message.textContent = "상위 5건에 들지 못했습니다";
+  else message.textContent = `${rank}위로 기록했습니다`;
+  message.hidden = false;
+  $("save-button").disabled = true;
+}
+
+function renderLeaderboard() {
+  renderOptionButtons("board-modes", ["speed", "hint"].map(k => [k, MODES[k].label]), boardView.mode, mode => {
+    boardView.mode = mode;
+    renderLeaderboard();
+  });
+  renderOptionButtons("board-categories", CATEGORIES.map(c => [c, c]), boardView.category, category => {
+    boardView.category = category;
+    renderLeaderboard();
+  });
+  const list = loadBoard()[boardKey(boardView.mode, boardView.category)] || [];
+  const body = $("board-body");
+  body.innerHTML = "";
+  if (list.length === 0) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 4;
+    td.textContent = "아직 기록이 없습니다";
+    tr.appendChild(td);
+    body.appendChild(tr);
+  }
+  list.forEach((r, i) => {
+    const tr = document.createElement("tr");
+    for (const value of [i + 1, r.name, formatScore(r.score), r.date]) {
+      const td = document.createElement("td");
+      td.textContent = value;
+      tr.appendChild(td);
+    }
+    body.appendChild(tr);
+  });
+  showScreen("board");
 }
 
 // ===== 시작 =====
@@ -536,6 +596,9 @@ function init() {
   $("retry-button").addEventListener("click", startRetry);
   $("again-button").addEventListener("click", () => startGame(state.mode, state.category));
   $("home-button").addEventListener("click", renderStart);
+  $("save-form").addEventListener("submit", onSaveRecord);
+  $("board-button").addEventListener("click", renderLeaderboard);
+  $("board-home-button").addEventListener("click", renderStart);
   $("mode-back-button").addEventListener("click", renderStart);
   renderStart();
 }

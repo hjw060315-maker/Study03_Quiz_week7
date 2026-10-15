@@ -69,3 +69,9 @@ button:disabled { cursor: default; opacity: 0.6; }
 
 .hint-button { margin-bottom: 12px; }
 .choice.removed { display: none; }
+
+.save-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 16px 0; }
+.save-form input { font: inherit; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; }
+.board-table { width: 100%; border-collapse: collapse; margin: 12px 0 16px; }
+.board-table th, .board-table td { padding: 8px; border-bottom: 1px solid var(--border); text-align: center; }
+button.selected { background: var(--primary); border-color: var(--primary); color: #fff; }
