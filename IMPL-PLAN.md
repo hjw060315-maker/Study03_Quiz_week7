@@ -1313,7 +1313,7 @@ git commit -m "feat: 연습 모드 틀린 문제 다시 풀기"
   - `loadBoard() → 순위표 객체`
   - `saveRecord(mode, category, name, score) → rank`. 저장할 수 없으면 `null`이다.
 
-- [ ] **1단계: `// ===== 자체 점검 =====` 구역 끝에 점검 항목 추가**
+- [x] **1단계: `// ===== 자체 점검 =====` 구역 끝에 점검 항목 추가**
 
 ```js
 test("insertRecord: 빈 표에 넣으면 1위", () => {
@@ -1387,12 +1387,12 @@ test("loadBoard: localStorage가 없으면 빈 순위표", () => assertEqual(loa
 
 `saveRecord` 점검은 Node 안에 가짜 `localStorage`를 잠깐 만들고, 끝나면 지운다. 자체 점검은 Node에서만 실행하므로 브라우저의 실제 순위표에는 영향이 없다.
 
-- [ ] **2단계: 자체 점검을 실행해 실패를 확인**
+- [x] **2단계: 자체 점검을 실행해 실패를 확인**
 
 실행: 자체 점검 명령
 기대: 새 항목 10개 실패, `20 / 30 통과`, 종료 코드 1
 
-- [ ] **3단계: `// ===== 순위표 =====` 구역 끝에 추가**
+- [x] **3단계: `// ===== 순위표 =====` 구역 끝에 추가**
 
 ```js
 const BOARD_KEY = "quizLeaderboard";
@@ -1459,12 +1459,12 @@ function saveRecord(mode, category, name, score) {
 
 같은 점수에서 먼저 세운 기록이 위에 오는 이유는 다음과 같다. `insertRecord`는 새 기록을 "자기보다 점수가 **낮은** 첫 기록" 앞에 넣으므로, 같은 점수의 기존 기록들 뒤에 들어간다. 깨진 값은 `parseBoard`가 빈 순위표로 바꾸고, 다음 저장 때 올바른 값으로 덮어쓴다.
 
-- [ ] **4단계: 자체 점검을 실행해 통과를 확인**
+- [x] **4단계: 자체 점검을 실행해 통과를 확인**
 
 실행: 자체 점검 명령
 기대: `30 / 30 통과`, 종료 코드 0
 
-- [ ] **5단계: 커밋**
+- [x] **5단계: 커밋**
 
 ```bash
 git add script.js
@@ -1482,7 +1482,7 @@ git commit -m "feat: 순위표 저장 로직"
 
 2단계에서 모드 선택을 별도 화면으로 바꾸면서 `renderOptionButtons`를 쓰지 않게 되었다. 순위표 화면의 모드·카테고리 고르기에 필요하므로 이 태스크에서 만든다.
 
-- [ ] **1단계: `index.html` 세 군데 고치기**
+- [x] **1단계: `index.html` 세 군데 고치기**
 
 시작 화면의 `<div id="category-buttons" class="button-grid"></div>` 바로 아래에 추가한다.
 
@@ -1517,7 +1517,7 @@ git commit -m "feat: 순위표 저장 로직"
     </section>
 ```
 
-- [ ] **2단계: `style.css` 끝에 추가**
+- [x] **2단계: `style.css` 끝에 추가**
 
 ```css
 .save-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 16px 0; }
@@ -1527,7 +1527,7 @@ git commit -m "feat: 순위표 저장 로직"
 button.selected { background: var(--primary); border-color: var(--primary); color: #fff; }
 ```
 
-- [ ] **3단계: `script.js`의 `let brokenCategories = new Set();` 바로 위에 `boardView`를, `renderStart` 함수 바로 위에 `renderOptionButtons`를 추가**
+- [x] **3단계: `script.js`의 `let brokenCategories = new Set();` 바로 위에 `boardView`를, `renderStart` 함수 바로 위에 `renderOptionButtons`를 추가**
 
 ```js
 const boardView = { mode: "speed", category: CATEGORIES[0] };
@@ -1548,7 +1548,7 @@ function renderOptionButtons(containerId, options, selected, onPick) {
 }
 ```
 
-- [ ] **4단계: `renderResult` 함수 전체를 아래로 바꾸기**
+- [x] **4단계: `renderResult` 함수 전체를 아래로 바꾸기**
 
 ```js
 function renderResult() {
@@ -1567,7 +1567,7 @@ function renderResult() {
 }
 ```
 
-- [ ] **5단계: `renderResult` 함수 바로 아래에 추가**
+- [x] **5단계: `renderResult` 함수 바로 아래에 추가**
 
 ```js
 function onSaveRecord(event) {
@@ -1616,7 +1616,7 @@ function renderLeaderboard() {
 
 이름은 `textContent`로만 넣는다. `innerHTML`을 쓰면 이름 칸에 입력한 HTML이 화면에서 실행될 수 있다. 기록을 저장하면 [기록 저장] 버튼을 꺼서, 같은 판을 두 번 저장하지 못하게 한다.
 
-- [ ] **6단계: `init` 함수에서 `$("home-button").addEventListener("click", renderStart);` 바로 아래에 추가**
+- [x] **6단계: `init` 함수에서 `$("home-button").addEventListener("click", renderStart);` 바로 아래에 추가**
 
 ```js
   $("save-form").addEventListener("submit", onSaveRecord);
@@ -1624,29 +1624,29 @@ function renderLeaderboard() {
   $("board-home-button").addEventListener("click", renderStart);
 ```
 
-- [ ] **7단계: 자체 점검과 문항 검사 실행**
+- [x] **7단계: 자체 점검과 문항 검사 실행**
 
 실행: 자체 점검 명령, 문항 검사 명령
 기대: `30 / 30 통과`, `문항 40개, 오류 0건`, 둘 다 종료 코드 0
 
-- [ ] **8단계: 커밋**
+- [x] **8단계: 커밋**
 
 ```bash
 git add index.html style.css script.js
 git commit -m "feat: 기록 저장과 순위표 화면"
 ```
 
-- [ ] **9단계: 멈추고 3단계 확인을 사람에게 요청**
+- [x] **9단계: 멈추고 3단계 확인을 사람에게 요청**
 
 아래 3단계 완료 기준을 점검해 보고한 뒤, "3단계 직접 확인할 항목"을 사람에게 보여 주고 확인을 기다린다.
 
 ## 3단계 완료 기준 (실행자가 점검)
 
-- [ ] 자체 점검 `30 / 30 통과`, 종료 코드 0
-- [ ] 문항 검사 `문항 40개, 오류 0건`
-- [ ] 같은 점수 처리, 5건 초과분 삭제, 깨진 값 처리, 저장 실패 처리를 자체 점검이 모두 확인한다(`insertRecord`, `parseBoard`, `saveRecord` 항목 통과)
-- [ ] 순위표에 이름을 넣을 때 `innerHTML`을 쓰지 않는다
-- [ ] 파일이 여전히 4개뿐이다
+- [x] 자체 점검 `30 / 30 통과`, 종료 코드 0
+- [x] 문항 검사 `문항 40개, 오류 0건`
+- [x] 같은 점수 처리, 5건 초과분 삭제, 깨진 값 처리, 저장 실패 처리를 자체 점검이 모두 확인한다(`insertRecord`, `parseBoard`, `saveRecord` 항목 통과)
+- [x] 순위표에 이름을 넣을 때 `innerHTML`을 쓰지 않는다
+- [x] 파일이 여전히 4개뿐이다
 
 ## 3단계 직접 확인할 항목 (사람이 브라우저에서)
 

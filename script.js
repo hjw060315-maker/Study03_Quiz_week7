@@ -81,6 +81,66 @@ function pickHintRemovals(answer, rand = Math.random) {
 }
 
 // ===== 순위표 =====
+const BOARD_KEY = "quizLeaderboard";
+const BOARD_SIZE = 5;
+
+function boardKey(mode, category) {
+  return `${mode}|${category}`;
+}
+
+function parseBoard(text) {
+  try {
+    const data = JSON.parse(text);
+    if (!data || typeof data !== "object" || Array.isArray(data)) return {};
+    const board = {};
+    for (const [key, list] of Object.entries(data)) {
+      if (!Array.isArray(list)) continue;
+      board[key] = list.filter(r => r && typeof r.name === "string" && typeof r.score === "number" && typeof r.date === "string");
+    }
+    return board;
+  } catch (err) {
+    return {};
+  }
+}
+
+function insertRecord(list, record) {
+  const next = list.slice();
+  let pos = next.findIndex(r => r.score < record.score);
+  if (pos === -1) pos = next.length;
+  next.splice(pos, 0, record);
+  return { list: next.slice(0, BOARD_SIZE), rank: pos < BOARD_SIZE ? pos + 1 : 0 };
+}
+
+function cleanName(name) {
+  const trimmed = String(name || "").trim().slice(0, 10);
+  return trimmed || "익명";
+}
+
+function todayString(date = new Date()) {
+  const pad = n => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function loadBoard() {
+  try {
+    return parseBoard(localStorage.getItem(BOARD_KEY));
+  } catch (err) {
+    return {};
+  }
+}
+
+function saveRecord(mode, category, name, score) {
+  const board = loadBoard();
+  const key = boardKey(mode, category);
+  const { list, rank } = insertRecord(board[key] || [], { name: cleanName(name), score, date: todayString() });
+  board[key] = list;
+  try {
+    localStorage.setItem(BOARD_KEY, JSON.stringify(board));
+  } catch (err) {
+    return null;
+  }
+  return rank;
+}
 
 // ===== 자체 점검 =====
 const TESTS = [];
@@ -207,6 +267,73 @@ test("prepareQuestion: 두 번 적용해도 정답 보기가 같음", () => {
   const p = prepareQuestion(prepareQuestion(q), Math.random);
   assertEqual(p.choices[p.answer], "C");
 });
+test("insertRecord: 빈 표에 넣으면 1위", () => {
+  const { list, rank } = insertRecord([], { name: "A", score: 7, date: "d" });
+  assertEqual(rank, 1);
+  assertEqual(list.length, 1);
+});
+test("insertRecord: 같은 점수는 먼저 세운 기록이 위", () => {
+  const { list, rank } = insertRecord([{ name: "A", score: 9, date: "d" }], { name: "B", score: 9, date: "d" });
+  assertEqual(list.map(r => r.name), ["A", "B"]);
+  assertEqual(rank, 2);
+});
+test("insertRecord: 5건을 넘으면 잘림", () => {
+  const full = [10, 9, 8, 7, 6].map((s, i) => ({ name: "P" + i, score: s, date: "d" }));
+  const low = insertRecord(full, { name: "L", score: 5, date: "d" });
+  assertEqual(low.rank, 0);
+  assertEqual(low.list.length, 5);
+  const high = insertRecord(full, { name: "H", score: 9.5, date: "d" });
+  assertEqual(high.rank, 2);
+  assertEqual(high.list.map(r => r.name), ["P0", "H", "P1", "P2", "P3"]);
+});
+test("parseBoard: 깨진 값은 빈 순위표", () => {
+  assertEqual(parseBoard("깨진값"), {});
+  assertEqual(parseBoard(null), {});
+  assertEqual(parseBoard("[1,2]"), {});
+  assertEqual(parseBoard('{"speed|과학":"x"}'), {});
+});
+test("parseBoard: 올바른 기록만 남김", () => {
+  const text = JSON.stringify({ "speed|과학": [{ name: "A", score: 8, date: "2026-10-08" }, { name: 3 }] });
+  assertEqual(parseBoard(text), { "speed|과학": [{ name: "A", score: 8, date: "2026-10-08" }] });
+});
+test("cleanName: 공백 제거, 10자, 빈 이름은 익명", () => {
+  assertEqual(cleanName("  민지  "), "민지");
+  assertEqual(cleanName(""), "익명");
+  assertEqual(cleanName("   "), "익명");
+  assertEqual(cleanName("가나다라마바사아자차카"), "가나다라마바사아자차");
+});
+test("todayString: YYYY-MM-DD", () => assertEqual(todayString(new Date(2026, 9, 8)), "2026-10-08"));
+function fakeStorage(failOnSet) {
+  const data = {};
+  return {
+    getItem: k => (k in data ? data[k] : null),
+    setItem: (k, v) => {
+      if (failOnSet) throw new Error("저장 불가");
+      data[k] = String(v);
+    },
+    data
+  };
+}
+test("saveRecord: 저장하고 순위를 돌려줌", () => {
+  globalThis.localStorage = fakeStorage(false);
+  try {
+    assertEqual(saveRecord("speed", "과학", "민지", 8), 1);
+    assertEqual(saveRecord("speed", "과학", "", 9), 1);
+    const board = JSON.parse(localStorage.data[BOARD_KEY]);
+    assertEqual(board["speed|과학"].map(r => [r.name, r.score]), [["익명", 9], ["민지", 8]]);
+  } finally {
+    delete globalThis.localStorage;
+  }
+});
+test("saveRecord: 저장할 수 없으면 null", () => {
+  globalThis.localStorage = fakeStorage(true);
+  try {
+    assertEqual(saveRecord("hint", "한국사", "A", 5), null);
+  } finally {
+    delete globalThis.localStorage;
+  }
+});
+test("loadBoard: localStorage가 없으면 빈 순위표", () => assertEqual(loadBoard(), {}));
 
 // ===== 화면 =====
 const state = {
@@ -222,6 +349,7 @@ const state = {
   timerId: null,
   timeLeft: 0
 };
+const boardView = { mode: "speed", category: CATEGORIES[0] };
 let brokenCategories = new Set();
 
 function $(id) {
@@ -231,6 +359,19 @@ function $(id) {
 function showScreen(name) {
   for (const section of document.querySelectorAll(".screen")) {
     section.hidden = section.id !== "screen-" + name;
+  }
+}
+
+function renderOptionButtons(containerId, options, selected, onPick) {
+  const box = $(containerId);
+  box.innerHTML = "";
+  for (const [value, label] of options) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = label;
+    btn.classList.toggle("selected", value === selected);
+    btn.addEventListener("click", () => onPick(value));
+    box.appendChild(btn);
   }
 }
 
@@ -396,7 +537,53 @@ function renderResult() {
   $("retry-summary").hidden = !state.isRetry;
   $("retry-summary").textContent = `다시 푼 결과 ${formatScore(state.score)} / ${state.questions.length}`;
   $("retry-button").hidden = !(mode.retry && state.wrong.length > 0);
+  $("save-form").hidden = !mode.ranked;
+  $("save-button").disabled = false;
+  $("save-message").hidden = true;
   showScreen("result");
+}
+
+function onSaveRecord(event) {
+  event.preventDefault();
+  const rank = saveRecord(state.mode, state.category, $("name-input").value, state.firstScore);
+  const message = $("save-message");
+  if (rank === null) message.textContent = "기록을 저장할 수 없습니다";
+  else if (rank === 0) message.textContent = "상위 5건에 들지 못했습니다";
+  else message.textContent = `${rank}위로 기록했습니다`;
+  message.hidden = false;
+  $("save-button").disabled = true;
+}
+
+function renderLeaderboard() {
+  renderOptionButtons("board-modes", ["speed", "hint"].map(k => [k, MODES[k].label]), boardView.mode, mode => {
+    boardView.mode = mode;
+    renderLeaderboard();
+  });
+  renderOptionButtons("board-categories", CATEGORIES.map(c => [c, c]), boardView.category, category => {
+    boardView.category = category;
+    renderLeaderboard();
+  });
+  const list = loadBoard()[boardKey(boardView.mode, boardView.category)] || [];
+  const body = $("board-body");
+  body.innerHTML = "";
+  if (list.length === 0) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 4;
+    td.textContent = "아직 기록이 없습니다";
+    tr.appendChild(td);
+    body.appendChild(tr);
+  }
+  list.forEach((r, i) => {
+    const tr = document.createElement("tr");
+    for (const value of [i + 1, r.name, formatScore(r.score), r.date]) {
+      const td = document.createElement("td");
+      td.textContent = value;
+      tr.appendChild(td);
+    }
+    body.appendChild(tr);
+  });
+  showScreen("board");
 }
 
 // ===== 시작 =====
@@ -409,6 +596,9 @@ function init() {
   $("retry-button").addEventListener("click", startRetry);
   $("again-button").addEventListener("click", () => startGame(state.mode, state.category));
   $("home-button").addEventListener("click", renderStart);
+  $("save-form").addEventListener("submit", onSaveRecord);
+  $("board-button").addEventListener("click", renderLeaderboard);
+  $("board-home-button").addEventListener("click", renderStart);
   $("mode-back-button").addEventListener("click", renderStart);
   renderStart();
 }

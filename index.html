@@ -13,6 +13,7 @@
       <h1>상식 퀴즈</h1>
       <h2>카테고리</h2>
       <div id="category-buttons" class="button-grid"></div>
+      <button id="board-button" type="button">순위표</button>
     </section>
 
     <section id="screen-mode" class="screen" hidden>
@@ -48,11 +49,28 @@
       <p id="result-score" class="big-score"></p>
       <p id="retry-summary" hidden></p>
       <p id="result-notice" class="notice">순위표에 기록되지 않음</p>
+      <form id="save-form" class="save-form" hidden>
+        <label for="name-input">이름(별명)</label>
+        <input id="name-input" maxlength="10" placeholder="비워 두면 익명">
+        <button id="save-button" type="submit">기록 저장</button>
+      </form>
+      <p id="save-message" hidden></p>
       <div class="button-row">
         <button id="retry-button" type="button" hidden>틀린 문제 다시 풀기</button>
         <button id="again-button" type="button">다시 하기</button>
         <button id="home-button" type="button">처음으로</button>
       </div>
+    </section>
+
+    <section id="screen-board" class="screen" hidden>
+      <h1>순위표</h1>
+      <div id="board-modes" class="button-grid"></div>
+      <div id="board-categories" class="button-grid"></div>
+      <table class="board-table">
+        <thead><tr><th>순위</th><th>이름</th><th>점수</th><th>날짜</th></tr></thead>
+        <tbody id="board-body"></tbody>
+      </table>
+      <button id="board-home-button" type="button">처음으로</button>
     </section>
   </main>
   <script src="questions.js"></script>
